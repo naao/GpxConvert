@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TrainingCenterDatabase
+  xsi:schemaLocation="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2 http://www.garmin.com/xmlschemas/TrainingCenterDatabasev2.xsd"
+  xmlns:ns5="http://www.garmin.com/xmlschemas/ActivityGoals/v1"
+  xmlns:ns3="http://www.garmin.com/xmlschemas/ActivityExtension/v2"
+  xmlns:ns2="http://www.garmin.com/xmlschemas/UserProfile/v2"
+  xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ns4="http://www.garmin.com/xmlschemas/ProfileExtension/v1">
+  <Activities>
+    <Activity Sport="Running">
+      <Id>2020-01-17T00:00:00.000Z</Id>
+      <Lap StartTime="2020-01-17T00:00:00.000Z">
+        <TotalTimeSeconds>0.00</TotalTimeSeconds>
+        <DistanceMeters>0.0</DistanceMeters>
+        <Intensity>Active</Intensity>
+        <TriggerMethod>Manual</TriggerMethod>
+        <Track>
+          <Trackpoint>
+            <Time>2020-01-17T00:00:00.000Z</Time>
+            <Position>
+              <LatitudeDegrees>35.61551995575428</LatitudeDegrees>
+              <LongitudeDegrees>140.06386997178197</LongitudeDegrees>
+            </Position>
+          </Trackpoint>
+        </Track>
+        <Extensions>
+          <ns3:LX>
+            <ns3:AvgSpeed>0.0</ns3:AvgSpeed>
+          </ns3:LX>
+        </Extensions>
+      </Lap>
+    </Activity>
+  </Activities>
+  <Author xsi:type="Application_t">
+    <Name>Connect Api</Name>
+    <Build>
+      <Version>
+        <VersionMajor>0</VersionMajor>
+        <VersionMinor>0</VersionMinor>
+        <BuildMajor>0</BuildMajor>
+        <BuildMinor>0</BuildMinor>
+      </Version>
+    </Build>
+    <LangID>en</LangID>
+    <PartNumber>006-D2449-00</PartNumber>
+  </Author>
+</TrainingCenterDatabase>
