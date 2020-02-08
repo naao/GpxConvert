@@ -1,4 +1,8 @@
-﻿Imports System.IO
+﻿'v.0.13 2020-2-8 ラップデータが1つ以下の場合の不具合を修正
+'v.0.12 2020-2-7 エラー処理を追加
+'v.0.1  2020-2-4 初版
+
+Imports System.IO
 Imports System.Runtime.Serialization.Json
 Imports System.Text
 Imports System.Xml
@@ -139,6 +143,8 @@ Public Class FrmGpxConvert
                                 If 0 < iLapNum Then
                                     '最終ラップを超えたら、総走行距離から引く
                                     iLapDistance = CInt(strWorkoutMeter) - lapsList(iLapNum - 1).meter
+                                Else
+                                    iLapDistance = CInt(strWorkoutMeter)
                                 End If
                                 '時間はトータル時間から、経過時間　を差し引く
                                 iLapTime = CInt(strWorkoutSec) - iElapsedTime
