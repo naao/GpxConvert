@@ -8,18 +8,19 @@
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ns4="http://www.garmin.com/xmlschemas/ProfileExtension/v1">
   <Activities>
     <Activity Sport="Running">
-      <Id>2020-01-17T00:00:00.000Z</Id>
-      <Lap StartTime="2020-01-17T00:00:00.000Z">
+      <Id>2016-02-20T00:49:32.000Z</Id>
+      <Lap StartTime="">
         <TotalTimeSeconds>0.00</TotalTimeSeconds>
         <DistanceMeters>0.0</DistanceMeters>
+        <Calories>0</Calories>
         <Intensity>Active</Intensity>
         <TriggerMethod>Manual</TriggerMethod>
         <Track>
           <Trackpoint>
-            <Time>2020-01-17T00:00:00.000Z</Time>
+            <Time>2016-02-20T00:49:32.000Z</Time>
             <Position>
-              <LatitudeDegrees>35.61551995575428</LatitudeDegrees>
-              <LongitudeDegrees>140.06386997178197</LongitudeDegrees>
+              <LatitudeDegrees>35.0</LatitudeDegrees>
+              <LongitudeDegrees>140.0</LongitudeDegrees>
             </Position>
           </Trackpoint>
         </Track>
@@ -42,6 +43,6 @@
       </Version>
     </Build>
     <LangID>en</LangID>
-    <PartNumber>006-D2449-00</PartNumber>
+    <PartNumber></PartNumber>
   </Author>
 </TrainingCenterDatabase>

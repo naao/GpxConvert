@@ -1,4 +1,5 @@
-﻿'v.0.13 2020-2-8 ラップデータが1つ以下の場合の不具合を修正
+﻿'v.0.20 2020-2-10 JogNoteのワークアウト総カロリーを各LAP距離で分割し反映
+'v.0.13 2020-2-8 ラップデータが1つ以下の場合の不具合を修正
 'v.0.12 2020-2-7 エラー処理を追加
 'v.0.1  2020-2-4 初版
 
@@ -36,6 +37,7 @@ Public Class FrmGpxConvert
 
             Dim strWorkoutMeter As String
             Dim strWorkoutSec As String
+            Dim strWorkoutKcal As String
             Dim strGpxFilename As String
 
             TbxMessage.Text += "[日付] " + strNoteDate + vbCrLf
@@ -67,6 +69,7 @@ Public Class FrmGpxConvert
 
                 strWorkoutMeter = workouts.meter
                 strWorkoutSec = workouts.sec
+                strWorkoutKcal = workouts.kcal
                 strGpxFilename = strGpxFolderName + workouts.route
 
                 Dim lapsList() As lapsList = workouts.laps
@@ -164,6 +167,7 @@ Public Class FrmGpxConvert
 
                             elmNewLap.GetElementsByTagName("DistanceMeters")(0).InnerText = iLapDistance
                             elmNewLap.GetElementsByTagName("TotalTimeSeconds")(0).InnerText = iLapTime
+                            elmNewLap.GetElementsByTagName("Calories")(0).InnerText = CInt(CInt(strWorkoutKcal) * iLapDistance / CInt(strWorkoutMeter))
                             elmNewLap.GetElementsByTagName("ns3:AvgSpeed")(0).InnerText = nmLapSpeed
 
                             'LAPに追加するGPSデータツリー
