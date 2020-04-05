@@ -1,4 +1,5 @@
-﻿'v.0.30 2020-4-5 GPSファイルが存在しない場合もTCXファイル変換を実行し出力するよう改善
+﻿'v.0.31 2020-4-5 エンバグ修正
+'v.0.30 2020-4-5 GPSファイルが存在しない場合もTCXファイル変換を実行し出力するよう改善
 'v.0.20 2020-2-10 JogNoteのワークアウト総カロリーを各LAP距離で分割し反映
 'v.0.13 2020-2-8 ラップデータが1つ以下の場合の不具合を修正
 'v.0.12 2020-2-7 エラー処理を追加
@@ -16,6 +17,7 @@ Public Class FrmGpxConvert
     Friend strJsonFolderName As String = ".\json.\"
     Friend strGpxFolderName As String = ".\gpx.\"
     Friend strTcxFolderName As String = ".\tcx_w.\"
+    Friend strTcxNoGpxFolderName As String = ".\tcx_w.\noGPX.\"
 
     Private Sub Execute()
 
@@ -41,6 +43,8 @@ Public Class FrmGpxConvert
             Dim strWorkoutKcal As String
             Dim strGpxFilename As String
 
+            Dim noGpx As Boolean = False
+
             TbxMessage.Text += "[日付] " + strNoteDate + vbCrLf
             TbxMessage.Text += "[日記] " + strNoteDiary + vbCrLf
 
@@ -49,7 +53,8 @@ Public Class FrmGpxConvert
 
             Dim workoutList() = oJsonRoot.note.workouts
             If workoutList.Count < 1 Then
-                Exit For    'ワークアウトが無い場合は無視
+                noGpx = True
+                'Exit For    'ワークアウトが無い場合は無視
             End If
 
             'テンプレート ファイルを読込み、TCXファイルの出力用DOMオブジェクト
@@ -77,7 +82,6 @@ Public Class FrmGpxConvert
                 'GPX XMLファイルをDOMオブジェクトに読込む
                 Dim domGpx As XmlDocument
                 Dim ndlTrkPoints As XmlNodeList
-                Dim noGpx As Boolean = False
                 Dim strTcxFileName As String
 
                 Dim strStartTime As String = ""
@@ -223,10 +227,9 @@ Public Class FrmGpxConvert
                     ' GPXファイルが存在しない場合
                     dtWorkoutStartTime = System.TimeZoneInfo.ConvertTimeToUtc(strNoteDate)
                     strStartTime = dtWorkoutStartTime.ToString("yyyy-MM-dd\THH:mm:ss\.000Z")
+                    ndlLaps(0).RemoveChild(elmActivity.GetElementsByTagName("Track")(0))
                     elmNewLap = ndlLaps(0).CloneNode(True)
                     elmActivity.AppendChild(elmNewLap)
-
-                    ndlLaps(0).RemoveChild(elmActivity.GetElementsByTagName("Track")(0))
 
                     elmNewLap.GetElementsByTagName("DistanceMeters")(0).InnerText = CInt(strWorkoutMeter)
                     elmNewLap.GetElementsByTagName("TotalTimeSeconds")(0).InnerText = CInt(strWorkoutSec)
@@ -234,7 +237,7 @@ Public Class FrmGpxConvert
                     elmNewLap.GetElementsByTagName("ns3:AvgSpeed")(0).InnerText = CInt(strWorkoutMeter) / CInt(strWorkoutSec)
                     elmNewLap.SetAttribute("StartTime", strStartTime)
 
-                    strTcxFileName = strTcxFolderName + jsonFile.Replace(".json", ".tcx").Replace(".\json.\", "")
+                    strTcxFileName = strTcxNoGpxFolderName + jsonFile.Replace(".json", ".tcx").Replace(".\json.\", "")
                 End If
 
                 elmActivity.RemoveChild(elmActivity.GetElementsByTagName("Lap")(0))
@@ -299,8 +302,8 @@ Public Class noteList
     Public Property weather As String
     Public Property location As String
     Public Property diary As String
-    Public Property physical_conditions As String
-    Public Property comments As String()
+    'Public Property physical_conditions As String
+    'Public Property comments As String()
     Public Property workouts As workoutList()
 End Class
 
