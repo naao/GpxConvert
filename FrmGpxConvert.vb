@@ -1,4 +1,5 @@
-﻿'v.0.20 2020-2-10 JogNoteのワークアウト総カロリーを各LAP距離で分割し反映
+﻿'v.0.30 2020-4-5 GPSファイルが存在しない場合もTCXファイル変換を実行し出力するよう改善
+'v.0.20 2020-2-10 JogNoteのワークアウト総カロリーを各LAP距離で分割し反映
 'v.0.13 2020-2-8 ラップデータが1つ以下の場合の不具合を修正
 'v.0.12 2020-2-7 エラー処理を追加
 'v.0.1  2020-2-4 初版
@@ -30,7 +31,7 @@ Public Class FrmGpxConvert
         For Each jsonFile As String In jsonFiles
 
             'jsonファイルを読み込み、noteRootクラスのjsonRootオブジェクトに格納
-            Dim oJsonRoot As noteRoot = ReadJson(Of noteRoot)(jsonFile)
+            Dim oJsonRoot As NoteRoot = ReadJson(Of NoteRoot)(jsonFile)
 
             Dim strNoteDate As String = oJsonRoot.note.[date]
             Dim strNoteDiary As String = oJsonRoot.note.diary
@@ -76,138 +77,168 @@ Public Class FrmGpxConvert
                 'GPX XMLファイルをDOMオブジェクトに読込む
                 Dim domGpx As XmlDocument
                 Dim ndlTrkPoints As XmlNodeList
+                Dim noGpx As Boolean = False
+                Dim strTcxFileName As String
 
-                Try
-                    'ファイルを開く
-                    domGpx = ReadDom(strGpxFilename)
-                    ndlTrkPoints = domGpx.GetElementsByTagName("trkpt")
-                Catch ex As System.IO.FileNotFoundException
-                    MessageBox.Show("紐づけられたGPXファイルが見つかりません" + strGpxFilename, "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error)
-                    Exit For
-                Catch ex As System.IO.IOException
-                    'IOExceptionをキャッチした時
-                    MessageBox.Show("ファイルがロックされている可能性があります" + strGpxFilename, "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error)
-                    Exit For
-                End Try
-
-                'リストBOXへファイル名を追記
-                LbxGpxFiles.Items.Add(strGpxFilename)
-
-                '開始時刻
-                Dim elmWorkoutStartTime As XmlElement = ndlTrkPoints(0)
-                Dim dtWorkoutStartTime As DateTime = System.TimeZoneInfo.ConvertTimeToUtc(elmWorkoutStartTime.GetElementsByTagName("time")(0).InnerText)
-
-                '経過時間
-                Dim iElapsedTime As Int32 = 0
-                Dim iLapNum As Int32 = 0
-                Dim iLapDistance As Int32
-                Dim iLapTime As Int32
-                Dim nmLapSpeed As Double = 0.0
-
-                Dim iTrNumPoints As Int32 = 0
+                Dim strStartTime As String = ""
+                Dim dtWorkoutStartTime As DateTime
 
                 'LAPデータ
                 Dim elmNewLap As XmlElement
                 Dim elmNewTracks As XmlElement
                 Dim elmNewTrackPoint As XmlElement
 
-                Dim strStartTime As String
-
-                '***** 各GPXポイントを処理 *****
-                For Each elmTrkPoint As XmlElement In ndlTrkPoints
-                    Dim strLat As String = elmTrkPoint.GetAttribute("lat")
-                    Dim strLon As String = elmTrkPoint.GetAttribute("lon")
-                    Dim dtGpsPoint As DateTime = System.TimeZoneInfo.ConvertTimeToUtc(elmTrkPoint.GetElementsByTagName("time")(0).InnerText)
-
-                    Dim tsElapsedTime As New TimeSpan(0, 0, 0, iElapsedTime)
-
+                If File.Exists(strGpxFilename) Then
+                    noGpx = False
                     Try
-                        '***** LAP区切りの処理 *****
-                        If ((dtWorkoutStartTime + tsElapsedTime) <= dtGpsPoint) And (iLapNum <= lapsList.Count) Then
-                            'LAP開始時間
-                            Dim dtLapStartTime As DateTime = dtGpsPoint
-                            Dim strLapStartTime As String
+                        'ファイルを開く
+                        domGpx = ReadDom(strGpxFilename)
+                        ndlTrkPoints = domGpx.GetElementsByTagName("trkpt")
+                    Catch ex As System.IO.FileNotFoundException
+                        MessageBox.Show("紐づけられたGPXファイルが見つかりません" + strGpxFilename, "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                        noGpx = True
+                        'Exit For
+                    Catch ex As System.IO.IOException
+                        'IOExceptionをキャッチした時
+                        MessageBox.Show("ファイルがロックされている可能性があります" + strGpxFilename, "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                        noGpx = True
+                        'Exit For
+                    End Try
+                Else
+                    noGpx = True
+                End If
 
-                            '***** LAP区間時間・距離の計算 *****
-                            If iLapNum < lapsList.Count Then
-                                '経過時間にLAP時間を加算
-                                iElapsedTime += CInt(lapsList(iLapNum).sec)
+                If noGpx = False Then
+                    ' GPXファイルが存在する場合
+                    'リストBOXへファイル名を追記
+                    LbxGpxFiles.Items.Add(strGpxFilename)
 
-                                '最終ラップを超えるまでは区間距離（今回ラップ距離-前回ラップ距離）
-                                If 0 < iLapNum Then
-                                    iLapDistance = lapsList(iLapNum).meter - lapsList(iLapNum - 1).meter
-                                Else
-                                    iLapDistance = lapsList(iLapNum).meter
+                    '開始時刻
+                    Dim elmWorkoutStartTime As XmlElement = ndlTrkPoints(0)
+                    dtWorkoutStartTime = System.TimeZoneInfo.ConvertTimeToUtc(elmWorkoutStartTime.GetElementsByTagName("time")(0).InnerText)
+
+                    '経過時間
+                    Dim iElapsedTime As Int32 = 0
+                    Dim iLapNum As Int32 = 0
+                    Dim iLapDistance As Int32
+                    Dim iLapTime As Int32
+                    Dim nmLapSpeed As Double = 0.0
+
+                    Dim iTrNumPoints As Int32 = 0
+
+                    '***** 各GPXポイントを処理 *****
+                    For Each elmTrkPoint As XmlElement In ndlTrkPoints
+                        Dim strLat As String = elmTrkPoint.GetAttribute("lat")
+                        Dim strLon As String = elmTrkPoint.GetAttribute("lon")
+                        Dim dtGpsPoint As DateTime = System.TimeZoneInfo.ConvertTimeToUtc(elmTrkPoint.GetElementsByTagName("time")(0).InnerText)
+
+                        Dim tsElapsedTime As New TimeSpan(0, 0, 0, iElapsedTime)
+
+                        Try
+                            '***** LAP区切りの処理 *****
+                            If ((dtWorkoutStartTime + tsElapsedTime) <= dtGpsPoint) And (iLapNum <= lapsList.Count) Then
+                                'LAP開始時間
+                                Dim dtLapStartTime As DateTime = dtGpsPoint
+                                Dim strLapStartTime As String
+
+                                '***** LAP区間時間・距離の計算 *****
+                                If iLapNum < lapsList.Count Then
+                                    '経過時間にLAP時間を加算
+                                    iElapsedTime += CInt(lapsList(iLapNum).sec)
+
+                                    '最終ラップを超えるまでは区間距離（今回ラップ距離-前回ラップ距離）
+                                    If 0 < iLapNum Then
+                                        iLapDistance = lapsList(iLapNum).meter - lapsList(iLapNum - 1).meter
+                                    Else
+                                        iLapDistance = lapsList(iLapNum).meter
+                                    End If
+                                    '時間はラップ時間のまま代入
+                                    iLapTime = lapsList(iLapNum).sec
+
+                                ElseIf iLapNum = lapsList.Count Then '最終ラップ分が記録されていないので、最終ラップデータから計算する
+                                    If 0 < iLapNum Then
+                                        '最終ラップを超えたら、総走行距離から引く
+                                        iLapDistance = CInt(strWorkoutMeter) - lapsList(iLapNum - 1).meter
+                                    Else
+                                        iLapDistance = CInt(strWorkoutMeter)
+                                    End If
+                                    '時間はトータル時間から、経過時間　を差し引く
+                                    iLapTime = CInt(strWorkoutSec) - iElapsedTime
                                 End If
-                                '時間はラップ時間のまま代入
-                                iLapTime = lapsList(iLapNum).sec
 
-                            ElseIf iLapNum = lapsList.Count Then '最終ラップ分が記録されていないので、最終ラップデータから計算する
-                                If 0 < iLapNum Then
-                                    '最終ラップを超えたら、総走行距離から引く
-                                    iLapDistance = CInt(strWorkoutMeter) - lapsList(iLapNum - 1).meter
-                                Else
-                                    iLapDistance = CInt(strWorkoutMeter)
+                                nmLapSpeed = iLapDistance / iLapTime
+
+                                'DOMにLAPを追加
+                                elmNewLap = ndlLaps(0).CloneNode(True)
+                                elmActivity.AppendChild(elmNewLap)
+
+                                strLapStartTime = dtLapStartTime.ToString("yyyy-MM-dd\THH:mm:ss\.000Z")
+                                elmNewLap.SetAttribute("StartTime", strLapStartTime)
+                                If iLapNum < 1 Then
+                                    strStartTime = strLapStartTime
                                 End If
-                                '時間はトータル時間から、経過時間　を差し引く
-                                iLapTime = CInt(strWorkoutSec) - iElapsedTime
+
+                                elmNewLap.GetElementsByTagName("DistanceMeters")(0).InnerText = iLapDistance
+                                elmNewLap.GetElementsByTagName("TotalTimeSeconds")(0).InnerText = iLapTime
+                                elmNewLap.GetElementsByTagName("Calories")(0).InnerText = CInt(CInt(strWorkoutKcal) * iLapDistance / CInt(strWorkoutMeter))
+                                elmNewLap.GetElementsByTagName("ns3:AvgSpeed")(0).InnerText = nmLapSpeed
+
+                                'LAPに追加するGPSデータツリー
+                                elmNewTracks = elmNewLap.GetElementsByTagName("Track")(0)
+
+                                TbxMessage.Text += "[LAP-" + (iLapNum + 1).ToString + "] " + iLapDistance.ToString + "m/" + iLapTime.ToString + "s" + vbCrLf
+
+                                iLapNum += 1
+
+                                iTrNumPoints = 0
+
                             End If
 
-                            nmLapSpeed = iLapDistance / iLapTime
+                        Catch ex As System.Exception
+                            'すべての例外をキャッチする
+                            '例外の説明を表示する
+                            MessageBox.Show(ex.Message, "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                            Exit For
 
-                            'DOMにLAPを追加
-                            elmNewLap = ndlLaps(0).CloneNode(True)
-                            elmActivity.AppendChild(elmNewLap)
+                        End Try
 
-                            strLapStartTime = dtLapStartTime.ToString("yyyy-MM-dd\THH:mm:ss\.000Z")
-                            elmNewLap.SetAttribute("StartTime", strLapStartTime)
-                            If iLapNum < 1 Then
-                                strStartTime = strLapStartTime
-                            End If
+                        elmNewTrackPoint = elmNewTracks.GetElementsByTagName("Trackpoint")(0).CloneNode(True)
+                        elmNewTrackPoint.GetElementsByTagName("Time")(0).InnerText = dtGpsPoint.ToString("yyyy-MM-dd\THH:mm:ss\.000Z")
+                        elmNewTrackPoint.GetElementsByTagName("LatitudeDegrees")(0).InnerText = strLat
+                        elmNewTrackPoint.GetElementsByTagName("LongitudeDegrees")(0).InnerText = strLon
 
-                            elmNewLap.GetElementsByTagName("DistanceMeters")(0).InnerText = iLapDistance
-                            elmNewLap.GetElementsByTagName("TotalTimeSeconds")(0).InnerText = iLapTime
-                            elmNewLap.GetElementsByTagName("Calories")(0).InnerText = CInt(CInt(strWorkoutKcal) * iLapDistance / CInt(strWorkoutMeter))
-                            elmNewLap.GetElementsByTagName("ns3:AvgSpeed")(0).InnerText = nmLapSpeed
+                        elmNewTracks.AppendChild(elmNewTrackPoint)
 
-                            'LAPに追加するGPSデータツリー
-                            elmNewTracks = elmNewLap.GetElementsByTagName("Track")(0)
-
-                            TbxMessage.Text += "[LAP-" + (iLapNum + 1).ToString + "] " + iLapDistance.ToString + "m/" + iLapTime.ToString + "s" + vbCrLf
-
-                            iLapNum += 1
-
-                            iTrNumPoints = 0
-
+                        If iTrNumPoints < 1 Then
+                            elmNewTracks.RemoveChild(elmNewTracks.GetElementsByTagName("Trackpoint")(0))
                         End If
 
-                    Catch ex As System.Exception
-                        'すべての例外をキャッチする
-                        '例外の説明を表示する
-                        MessageBox.Show(ex.Message, "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error)
-                        Exit For
+                        iTrNumPoints += 1
 
-                    End Try
+                    Next    'For Each elmTrkPoint
 
-                    elmNewTrackPoint = elmNewTracks.GetElementsByTagName("Trackpoint")(0).CloneNode(True)
-                    elmNewTrackPoint.GetElementsByTagName("Time")(0).InnerText = dtGpsPoint.ToString("yyyy-MM-dd\THH:mm:ss\.000Z")
-                    elmNewTrackPoint.GetElementsByTagName("LatitudeDegrees")(0).InnerText = strLat
-                    elmNewTrackPoint.GetElementsByTagName("LongitudeDegrees")(0).InnerText = strLon
+                    strTcxFileName = strTcxFolderName + workouts.route.Replace(".gpx", ".tcx")
 
-                    elmNewTracks.AppendChild(elmNewTrackPoint)
+                Else
+                    ' GPXファイルが存在しない場合
+                    dtWorkoutStartTime = System.TimeZoneInfo.ConvertTimeToUtc(strNoteDate)
+                    strStartTime = dtWorkoutStartTime.ToString("yyyy-MM-dd\THH:mm:ss\.000Z")
+                    elmNewLap = ndlLaps(0).CloneNode(True)
+                    elmActivity.AppendChild(elmNewLap)
 
-                    If iTrNumPoints < 1 Then
-                        elmNewTracks.RemoveChild(elmNewTracks.GetElementsByTagName("Trackpoint")(0))
-                    End If
+                    ndlLaps(0).RemoveChild(elmActivity.GetElementsByTagName("Track")(0))
 
-                    iTrNumPoints += 1
+                    elmNewLap.GetElementsByTagName("DistanceMeters")(0).InnerText = CInt(strWorkoutMeter)
+                    elmNewLap.GetElementsByTagName("TotalTimeSeconds")(0).InnerText = CInt(strWorkoutSec)
+                    elmNewLap.GetElementsByTagName("Calories")(0).InnerText = CInt(strWorkoutKcal)
+                    elmNewLap.GetElementsByTagName("ns3:AvgSpeed")(0).InnerText = CInt(strWorkoutMeter) / CInt(strWorkoutSec)
+                    elmNewLap.SetAttribute("StartTime", strStartTime)
 
-                Next    'For Each elmTrkPoint
+                    strTcxFileName = strTcxFolderName + jsonFile.Replace(".json", ".tcx").Replace(".\json.\", "")
+                End If
 
                 elmActivity.RemoveChild(elmActivity.GetElementsByTagName("Lap")(0))
                 elmActivity.GetElementsByTagName("Id")(0).InnerText = strStartTime
-
-                Dim strTcxFileName As String = strTcxFolderName + workouts.route.Replace(".gpx", ".tcx")
 
                 'DOMをファイルに出力
                 domOut.Save(strTcxFileName)
@@ -258,7 +289,7 @@ Public Class FrmGpxConvert
 
 End Class
 
-Public Class noteRoot
+Public Class NoteRoot
     Public Property note As noteList
 End Class
 
