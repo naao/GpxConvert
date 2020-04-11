@@ -1,4 +1,5 @@
-﻿'v.0.31 2020-4-5 エンバグ修正
+﻿'v.0.32 2020-4-11 GPXファイルの無い時のエラー抑制
+'v.0.31 2020-4-5 エンバグ修正
 'v.0.30 2020-4-5 GPSファイルが存在しない場合もTCXファイル変換を実行し出力するよう改善
 'v.0.20 2020-2-10 JogNoteのワークアウト総カロリーを各LAP距離で分割し反映
 'v.0.13 2020-2-8 ラップデータが1つ以下の場合の不具合を修正
@@ -227,15 +228,18 @@ Public Class FrmGpxConvert
                     ' GPXファイルが存在しない場合
                     dtWorkoutStartTime = System.TimeZoneInfo.ConvertTimeToUtc(strNoteDate)
                     strStartTime = dtWorkoutStartTime.ToString("yyyy-MM-dd\THH:mm:ss\.000Z")
-                    ndlLaps(0).RemoveChild(elmActivity.GetElementsByTagName("Track")(0))
                     elmNewLap = ndlLaps(0).CloneNode(True)
                     elmActivity.AppendChild(elmNewLap)
 
-                    elmNewLap.GetElementsByTagName("DistanceMeters")(0).InnerText = CInt(strWorkoutMeter)
-                    elmNewLap.GetElementsByTagName("TotalTimeSeconds")(0).InnerText = CInt(strWorkoutSec)
-                    elmNewLap.GetElementsByTagName("Calories")(0).InnerText = CInt(strWorkoutKcal)
-                    elmNewLap.GetElementsByTagName("ns3:AvgSpeed")(0).InnerText = CInt(strWorkoutMeter) / CInt(strWorkoutSec)
-                    elmNewLap.SetAttribute("StartTime", strStartTime)
+                    Try
+                        elmNewLap.RemoveChild(elmNewLap.GetElementsByTagName("Track")(0))
+                        elmNewLap.GetElementsByTagName("DistanceMeters")(0).InnerText = CInt(strWorkoutMeter)
+                        elmNewLap.GetElementsByTagName("TotalTimeSeconds")(0).InnerText = CInt(strWorkoutSec)
+                        elmNewLap.GetElementsByTagName("Calories")(0).InnerText = CInt(strWorkoutKcal)
+                        elmNewLap.GetElementsByTagName("ns3:AvgSpeed")(0).InnerText = CInt(strWorkoutMeter) / CInt(strWorkoutSec)
+                        elmNewLap.SetAttribute("StartTime", strStartTime)
+                    Catch ex As System.Exception
+                    End Try
 
                     strTcxFileName = strTcxNoGpxFolderName + jsonFile.Replace(".json", ".tcx").Replace(".\json.\", "")
                 End If
