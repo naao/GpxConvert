@@ -1,4 +1,5 @@
-﻿'v.0.32 2020-4-11 GPXファイルの無い時のエラー抑制
+﻿'v.0.33 2020-4-12 エラー抑制
+'v.0.32 2020-4-11 GPXファイルの無い時のエラー抑制
 'v.0.31 2020-4-5 エンバグ修正
 'v.0.30 2020-4-5 GPSファイルが存在しない場合もTCXファイル変換を実行し出力するよう改善
 'v.0.20 2020-2-10 JogNoteのワークアウト総カロリーを各LAP距離で分割し反映
@@ -37,7 +38,7 @@ Public Class FrmGpxConvert
             Dim oJsonRoot As NoteRoot = ReadJson(Of NoteRoot)(jsonFile)
 
             Dim strNoteDate As String = oJsonRoot.note.[date]
-            Dim strNoteDiary As String = oJsonRoot.note.diary
+            Dim strNoteDiary() As String = oJsonRoot.note.diary
 
             Dim strWorkoutMeter As String
             Dim strWorkoutSec As String
@@ -47,7 +48,11 @@ Public Class FrmGpxConvert
             Dim noGpx As Boolean = False
 
             TbxMessage.Text += "[日付] " + strNoteDate + vbCrLf
-            TbxMessage.Text += "[日記] " + strNoteDiary + vbCrLf
+            If Not IsNothing(strNoteDiary) And IsArray(strNoteDiary) Then
+                If strNoteDiary.Length > 0 Then
+                    TbxMessage.Text += "[日記] " + strNoteDiary(0) + vbCrLf
+                End If
+            End If
 
             'リストBOXへファイル名を追記
             LbxJsonFiles.Items.Add(jsonFile)
@@ -58,15 +63,20 @@ Public Class FrmGpxConvert
                 'Exit For    'ワークアウトが無い場合は無視
             End If
 
-            'テンプレート ファイルを読込み、TCXファイルの出力用DOMオブジェクト
+            'テンプレート ファイルを読込み用,TCXファイルの出力用DOMオブジェクト
             Dim domOut As XmlDocument
             Dim elmActivity As XmlElement
             Dim ndlLaps As XmlNodeList
+            Dim elmLapTemplate As XmlElement
             Try
                 'ファイルを開く
                 domOut = ReadDom(strTemplateFileName)
                 elmActivity = domOut.GetElementsByTagName("Activity")(0)
                 ndlLaps = elmActivity.GetElementsByTagName("Lap")
+                elmLapTemplate = ndlLaps(0).Clone
+
+                elmActivity = domOut.GetElementsByTagName("Activity")(0)
+
             Catch ex As System.IO.FileNotFoundException
                 MessageBox.Show("テンプレートファイルが見つかりません", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error)
                 Exit For
@@ -174,7 +184,7 @@ Public Class FrmGpxConvert
                                 nmLapSpeed = iLapDistance / iLapTime
 
                                 'DOMにLAPを追加
-                                elmNewLap = ndlLaps(0).CloneNode(True)
+                                elmNewLap = elmLapTemplate.Clone
                                 elmActivity.AppendChild(elmNewLap)
 
                                 strLapStartTime = dtLapStartTime.ToString("yyyy-MM-dd\THH:mm:ss\.000Z")
@@ -199,7 +209,8 @@ Public Class FrmGpxConvert
 
                             End If
 
-                        Catch ex As System.Exception
+                            'Catch ex As System.Exception
+                        Catch ex As Exception
                             'すべての例外をキャッチする
                             '例外の説明を表示する
                             MessageBox.Show(ex.Message, "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error)
@@ -296,7 +307,7 @@ Public Class FrmGpxConvert
 
 End Class
 
-Public Class NoteRoot
+Public Class noteRoot
     Public Property note As noteList
 End Class
 
@@ -305,7 +316,8 @@ Public Class noteList
     Public Property [date] As String
     Public Property weather As String
     Public Property location As String
-    Public Property diary As String
+    Public Property diary As String()
+
     'Public Property physical_conditions As String
     'Public Property comments As String()
     Public Property workouts As workoutList()
